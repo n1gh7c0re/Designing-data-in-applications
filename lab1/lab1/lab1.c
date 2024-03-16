@@ -3,35 +3,28 @@
 #include <stdio.h>
 #include <math.h>
 #include <stdlib.h>
-#define MAX 1000000.0
+#include <malloc.h>
+#include <float.h>
+
+#define NUMBER_OF_POINTS_ERROR 1
+#define MEMORY_ERROR 2
+
 #define minimal(a, b) (((a)<(b))?(a):(b))
 #define three_minimal(a, b, c) minimal(minimal(a, b), c)
 
 // Structure of a point in 2D plane
-struct Point {
+typedef struct {
     double x, y;
-};
-
-// Function to find maximum of two double values
-double Max(double x, double y) {
-    return (x >= y) ? x : y;
-}
+} Point;
 
 // Function to find distance between two points in a plane
-double distance(struct Point p1, struct Point p2) {
+double distance(Point p1,Point p2) {
     return sqrt((p1.x - p2.x) * (p1.x - p2.x) +
         (p1.y - p2.y) * (p1.y - p2.y));
 }
 
-// Function to find cost of a triangle
-// The cost is considered as diagonal length
-double cost(struct Point points[], int i, int j) {
-    struct Point p1 = points[i], p2 = points[j];
-    return distance(p1, p2); //?????
-}
-
 // A Dynamic programming based function to find minimum cost for convex polygon triangulation.
-double** mTCDP(struct Point points[], int const n) {
+double** Triangulation(Point points[], int n) {
    // Table to store results of subproblems
    // Table[i][j] stores cost of triangulation of points from i to j
    // The entry table[0][n-1] stores the final result.
@@ -43,24 +36,18 @@ double** mTCDP(struct Point points[], int const n) {
    // Fill table using above recursive formula.
    // Note that the table is filled in diagonal fashion i.e.,
    // from diagonal elements to table[0][n-1] which is the result.
-    //for (int i = 0; i < n; i++) {
-    //    for (int j = i + 2; j < n; j++) {
-    //        table[i][j] = MAX;
-    //        table[i][j - 1] = MAX;
-    //        table[i][j - 2] = MAX;
-    //    }
-    //}
     for (int gap = 0; gap < n; gap++) {
         for (int i = 0, j = gap; j < n; i++, j++) {
-            if ((j - i) <= 2)
-                table[i][j] = MAX;
+            if (fabs(j - i) <= 2)
+                table[i][j] = DBL_MAX;
             else {
-                table[i][j] = MAX;
-                for (int k = i + 1; k < j; k++) {
+                table[i][j] = DBL_MAX;
+                for (int k = i + 1; k < j - 1; k++) { // i
                     double minDiag = three_minimal(table[i][k], table[k][j], distance(points[k], points[j]));
                     if (table[i][j] > minDiag)
-                        table[i][j] = minDiag; //??? cost(points, k, j)
+                        table[i][j] = minDiag;   
                 }
+                
             }
         }
     }
@@ -68,14 +55,25 @@ double** mTCDP(struct Point points[], int const n) {
 }
 
 int main(void) {
-    struct Point points[] = { {0, 0}, {0, 2}, {4, 2}, {2, 0} };
-    int n = sizeof(points) / sizeof(points[0]);
+    int n = 0;
+    printf("Enter the number of vertices of the polygon: ");
+    scanf("%d", &n);
     if (n < 3) {
         printf("There must be at least 3 points to form a triangle\n");
-        return 1;
+        return NUMBER_OF_POINTS_ERROR;
     }
 
-    double** table = mTCDP(points, n);
+    Point* points = (Point*)malloc(sizeof(Point) * n);
+    if (!points) {
+        printf("Memory allocation error");
+        return MEMORY_ERROR;
+    }
+    for (int i = 0; i < n; i++) {
+        printf("Enter the coordinates of the point: ");
+        scanf("%lf %lf", &points[i].x, &points[i].y);
+    }
+
+    double** table = Triangulation(points, n);
     printf("The minimum length of the longest diagonal in the triangulation is: %lf", table[0][n - 1]);
 
     for (int i = 0; i < n; i++) {
